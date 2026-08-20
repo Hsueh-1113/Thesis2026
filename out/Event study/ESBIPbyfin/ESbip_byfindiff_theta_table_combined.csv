@@ -1,0 +1,29 @@
+group,period,theta,pval,stars,theta_display,p_display
+No baseline financial difficulty,2019 (base),0,,,0.00,
+No baseline financial difficulty,2016,.4536280851343544,.11432434,,0.45,0.11
+No baseline financial difficulty,2017,-.1452282721453396,.5972653,,-0.15,0.60
+No baseline financial difficulty,2018,.1533035763440579,.52181166,,0.15,0.52
+No baseline financial difficulty,2020/04,-.7379405331492321,.0079535013,***,-0.74***,0.01
+No baseline financial difficulty,2020/05,-.3420910733731798,.20948818,,-0.34,0.21
+No baseline financial difficulty,2020/06,-.7852994766225617,.0074569401,***,-0.79***,0.01
+No baseline financial difficulty,2020/07,-.4175031852310722,.13106526,,-0.42,0.13
+No baseline financial difficulty,2020/09,-.3306987894430254,.20725703,,-0.33,0.21
+No baseline financial difficulty,2020/11,-.5576709950903774,.07195653,*,-0.56*,0.07
+No baseline financial difficulty,2021/01,-.2566420660609824,.40576625,,-0.26,0.41
+No baseline financial difficulty,2021/03,-.6021993445422154,.028824285,**,-0.60**,0.03
+No baseline financial difficulty,2021/09,-.4805740122573878,.098250985,*,-0.48*,0.10
+No baseline financial difficulty,Joint pre-trend,,.17614284,,,0.18
+Baseline financial difficulty,2019 (base),0,,,0.00,
+Baseline financial difficulty,2016,-.6472855045643569,.16312046,,-0.65,0.16
+Baseline financial difficulty,2017,-.2755272926130791,.54438275,,-0.28,0.54
+Baseline financial difficulty,2018,-.1822356207951068,.6679678,,-0.18,0.67
+Baseline financial difficulty,2020/04,-2.137050437787414,.00001739943,***,-2.14***,0.00
+Baseline financial difficulty,2020/05,-1.051129634296415,.051980015,*,-1.05*,0.05
+Baseline financial difficulty,2020/06,-1.492513909574999,.0024677813,***,-1.49***,0.00
+Baseline financial difficulty,2020/07,-1.947751370497994,.00053294259,***,-1.95***,0.00
+Baseline financial difficulty,2020/09,-.575500269082861,.29666317,,-0.58,0.30
+Baseline financial difficulty,2020/11,-.268498655633596,.61022431,,-0.27,0.61
+Baseline financial difficulty,2021/01,-.7799580622946543,.18765345,,-0.78,0.19
+Baseline financial difficulty,2021/03,-.3485084408494406,.48883709,,-0.35,0.49
+Baseline financial difficulty,2021/09,-.5822931889918701,.23450638,,-0.58,0.23
+Baseline financial difficulty,Joint pre-trend,,.58343947,,,0.58

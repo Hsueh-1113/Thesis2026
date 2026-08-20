@@ -1,0 +1,32 @@
+\begin{table}[htbp]
+\centering
+\caption{Well-being by ethnicity: financial status}
+\small
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{p{5.2cm}ccccc}
+\toprule
+& bip & bip & Non-bip & Non-bip & p-value \\
+\midrule
+\multicolumn{6}{l}{\textit{Financial difficulties at baseline}} \\
+No (1-3) & -0.27*** &  & -0.18*** &  & [0.17] \\
+& (0.07) &  & (0.02) &  & \\
+Yes (4-5) & -0.51*** &  & -0.17*** &  & [0.00] \\
+& (0.11) &  & (0.04) &  & \\
+\addlinespace
+\multicolumn{6}{l}{\textit{Change in financial status}} \\
+Better &  & -0.24 &  & 0.00 & [0.12] \\
+&  & (0.17) &  & (0.04) & \\
+No change &  & -0.20*** &  & -0.19*** & [0.80] \\
+&  & (0.07) &  & (0.02) & \\
+Worse &  & -0.82*** &  & -0.41*** & [0.01] \\
+&  & (0.16) &  & (0.05) & \\
+\midrule
+Observations & 797 & 795 & 12570 & 12558 & \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+
+\begin{flushleft}
+\footnotesize Notes: Entries are margins from separate bip-only and Non-bip-only survey regressions. Standard errors are in parentheses. Difference reports p-values from pooled models testing bip vs Non-bip within each row. * p<0.10, ** p<0.05, *** p<0.01.
+\end{flushleft}
+\end{table}
