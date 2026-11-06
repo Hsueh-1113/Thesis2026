@@ -190,4 +190,4 @@ gen str10 p_display     = cond(missing(pval), "", string(pval, "%9.2f"))
 
 list period theta_display p_display, noobs
 
-export delimited using "${out}/Event study/ESbip_theta_table.csv", replace
+export delimited using "${out}/Event_study/ESbip_theta_table.csv", replace
