@@ -1,5 +1,5 @@
-cap mkdir "${out}/ESBIPbyfin"
-cap mkdir "${work}/ESBIPbyfin"
+cap mkdir "${out}/ESBIPbySex"
+cap mkdir "${work}/ESBIPbySex"
 
 use "${work}/GHQ_longpanel_UKHLS_w1w11_plus_COVID_2020_2021_withIDs_apr_zinv.dta", clear
 
@@ -8,54 +8,27 @@ capture drop ghq_likert_apr_inv
 gen double ghq_likert_apr_inv = -ghq_likert_apr
 
 *====================================================
-* 0) Baseline financial difficulty
-*    1 = just about getting by / quite difficult / very difficult in 2019
-*    0 = living comfortably / doing alright in 2019
+* 0) Sex variable
 *====================================================
 
-capture confirm variable fin_diff_base
-
+* If sex_dv is not already in the long file, merge it from xwavedat
+capture confirm variable sex_dv
 if _rc {
-
-    * Option A: if the long file contains finnow
-    capture confirm variable finnow
-
-    if !_rc {
-        replace finnow = . if finnow < 0
-
-        capture drop finnow_2019 finnow_base
-        gen double finnow_2019 = finnow if study=="UKHLS" & endyear==2019 & inrange(finnow,1,5)
-
-        bys pidp: egen finnow_base = max(finnow_2019)
-
-        gen byte fin_diff_base = .
-        replace fin_diff_base = 0 if inlist(finnow_base,1,2)
-        replace fin_diff_base = 1 if inlist(finnow_base,3,4,5)
-
-        drop finnow_2019 finnow_base
-    }
-
-    * Option B: if finnow is not in the long file, merge pre-constructed variable
-    else {
-        merge m:1 pidp using "${work}/BASE_delta2019_CA_zinv_COVIDWGT.dta", ///
-            keepusing(fin_diff_base) nogen keep(master match)
-    }
+    merge m:1 pidp using "${p6614}/xwavedat.dta", ///
+        keepusing(sex_dv) nogen keep(master match)
 }
 
-capture confirm variable fin_diff_base
-if _rc {
-    di as error "Cannot find or create fin_diff_base. Check whether finnow exists or whether BASE_delta2019_CA_zinv_COVIDWGT.dta contains fin_diff_base."
-    exit 111
-}
+replace sex_dv = . if sex_dv < 0
 
-replace fin_diff_base = . if !inlist(fin_diff_base,0,1)
+capture drop female
+gen byte female = .
+replace female = 0 if sex_dv == 1   // male
+replace female = 1 if sex_dv == 2   // female
 
-label define findiff_lbl ///
-    0 "No baseline financial difficulty" ///
-    1 "Baseline financial difficulty", replace
-label values fin_diff_base findiff_lbl
+label define femlbl 0 "Male" 1 "Female", replace
+label values female femlbl
 
-drop if missing(fin_diff_base)
+drop if missing(female)
 
 *====================================================
 * 1) Define BIP and White majority comparison sample
@@ -100,7 +73,7 @@ label values bip bip_lbl
 * 2) Keep event-study analysis sample
 *====================================================
 
-keep if !missing(pidp, bip, fin_diff_base, ghq_likert_apr_inv)
+keep if !missing(pidp, bip, female, ghq_likert_apr_inv)
 
 * pre: UKHLS 2016-2019
 * post: COVID waves
@@ -155,23 +128,23 @@ tempfile analysis_sample
 save `analysis_sample', replace
 
 *====================================================
-* 3) Conditional event study by baseline financial difficulty
-*    BIP vs White majority within financial-vulnerability subgroup
+* Conditional event study by sex
+* BIP vs White majority within male and female samples
 *====================================================
 
-forvalues f = 0/1 {
+forvalues s = 0/1 {
 
     use `analysis_sample', clear
-    keep if fin_diff_base == `f'
+    keep if female == `s'
 
-    if `f' == 0 local fname "nofindiff"
-    if `f' == 1 local fname "findiff"
+    if `s' == 0 local sname "male"
+    if `s' == 1 local sname "female"
 
-    if `f' == 0 local flabel "No baseline financial difficulty"
-    if `f' == 1 local flabel "Baseline financial difficulty"
+    if `s' == 0 local slabel "Male"
+    if `s' == 1 local slabel "Female"
 
     di "===================================================="
-    di "Event study for `flabel': BIP vs White majority"
+    di "Event study for `slabel': BIP vs White majority"
     di "===================================================="
 
     * Check subgroup sample size
@@ -184,15 +157,15 @@ forvalues f = 0/1 {
     reghdfe ghq_likert_apr_inv ib4.evt_cat##i.bip, ///
         absorb(pidp) vce(cluster pidp)
 
-    estimates store ES_bip_`fname'
+    estimates store ES_bip_`sname'
 
-    * Joint pre-trend test: 2016, 2017, 2018 relative to 2019
+    * Joint pre-trend test
     test 1.evt_cat#1.bip 2.evt_cat#1.bip 3.evt_cat#1.bip
-    scalar pretrend_p_`fname' = r(p)
-    display "`flabel' pre-trend p-value = " pretrend_p_`fname'
+    scalar pretrend_p_`sname' = r(p)
+    display "`slabel' pre-trend p-value = " pretrend_p_`sname'
 
     *====================================================
-    * 4) Export group-specific paths for plotting
+    * Export group-specific paths for plotting
     *====================================================
 
     tempname memhold
@@ -200,7 +173,7 @@ forvalues f = 0/1 {
     postfile `memhold' int evt str12 period ///
         double est_wm se_wm lb_wm ub_wm ///
         double est_bip se_bip lb_bip ub_bip ///
-        using "${work}/ESBIPbyfin/esbip_`fname'_plotdata.dta", replace
+        using "${work}/ESBIPbySex/esbip_`sname'_plotdata.dta", replace
 
     * Baseline 2019: both groups normalized to zero
     post `memhold' (4) ("2019") ///
@@ -233,24 +206,23 @@ forvalues f = 0/1 {
     postclose `memhold'
 
     *====================================================
-    * 5) Export theta_k coefficients:
-    *    BIP-WM gap relative to 2019 within subgroup
+    * Export theta_k coefficients:
+    * BIP-WM gap relative to 2019 within sex subgroup
     *====================================================
 
-    estimates restore ES_bip_`fname'
+    estimates restore ES_bip_`sname'
 
     test 1.evt_cat#1.bip 2.evt_cat#1.bip 3.evt_cat#1.bip
     scalar pretrend_p = r(p)
 
     tempname memhold3
 
-    postfile `memhold3' str35 group str20 period double theta pval str3 stars ///
-        using "${work}/ESBIPbyfin/esbip_`fname'_theta_table.dta", replace
+    postfile `memhold3' str8 sex str20 period double theta pval str3 stars ///
+        using "${work}/ESBIPbySex/esbip_`sname'_theta_table.dta", replace
 
     * Baseline row
-    post `memhold3' ("`flabel'") ("2019 (base)") (0) (.) ("")
+    post `memhold3' ("`slabel'") ("2019 (base)") (0) (.) ("")
 
-    * Pre + post periods
     foreach j in 1 2 3 5 6 7 8 9 10 11 12 13 {
 
         lincom `j'.evt_cat#1.bip
@@ -265,23 +237,23 @@ forvalues f = 0/1 {
 
         local lab : label evtlbl `j'
 
-        post `memhold3' ("`flabel'") ("`lab'") (`theta') (`pval') ("`stars'")
+        post `memhold3' ("`slabel'") ("`lab'") (`theta') (`pval') ("`stars'")
     }
 
     * Joint pre-trend row
-    post `memhold3' ("`flabel'") ("Joint pre-trend") (.) (pretrend_p) ("")
+    post `memhold3' ("`slabel'") ("Joint pre-trend") (.) (pretrend_p) ("")
 
     postclose `memhold3'
 
     *====================================================
-    * 6) Export CSV files
+    * Export CSV files
     *====================================================
 
-    use "${work}/ESBIPbyfin/esbip_`fname'_plotdata.dta", clear
+    use "${work}/ESBIPbySex/esbip_`sname'_plotdata.dta", clear
     sort evt
-    export delimited using "${work}/ESBIPbyfin/esbip_`fname'_plotdata.csv", replace
+    export delimited using "${work}/ESBIPbySex/esbip_`sname'_plotdata.csv", replace
 
-    use "${work}/ESBIPbyfin/esbip_`fname'_theta_table.dta", clear
+    use "${work}/ESBIPbySex/esbip_`sname'_theta_table.dta", clear
 
     format theta %9.3f
     format pval %9.3f
@@ -289,17 +261,17 @@ forvalues f = 0/1 {
     gen str15 theta_display = cond(missing(theta), "", string(theta, "%9.2f") + stars)
     gen str10 p_display     = cond(missing(pval), "", string(pval, "%9.2f"))
 
-    list group period theta_display p_display, noobs
+    list sex period theta_display p_display, noobs
 
-    export delimited using "${out}/ESBIPbyfin/ESbip_`fname'_theta_table.csv", replace
+    export delimited using "${out}/ESBIPbySex/ESbip_`sname'_theta_table.csv", replace
 }
 
 *====================================================
-* 7) Export combined financial-difficulty theta table
+* Combined male/female theta table
 *====================================================
 
-use "${work}/ESBIPbyfin/esbip_nofindiff_theta_table.dta", clear
-append using "${work}/ESBIPbyfin/esbip_findiff_theta_table.dta"
+use "${work}/ESBIPbySex/esbip_male_theta_table.dta", clear
+append using "${work}/ESBIPbySex/esbip_female_theta_table.dta"
 
 format theta %9.3f
 format pval %9.3f
@@ -308,6 +280,6 @@ capture drop theta_display p_display
 gen str15 theta_display = cond(missing(theta), "", string(theta, "%9.2f") + stars)
 gen str10 p_display     = cond(missing(pval), "", string(pval, "%9.2f"))
 
-list group period theta_display p_display, noobs
+list sex period theta_display p_display, noobs
 
-export delimited using "${out}/Event study/ESBIPbyfin/ESbip_byfindiff_theta_table_combined.csv", replace
+export delimited using "${out}/Event_study/ESBIPbySex/ESbip_bysex_theta_table_combined.csv", replace

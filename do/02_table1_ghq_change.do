@@ -83,8 +83,8 @@ list ethn_str mean_2019_ghq_likert mean_CA_ghq_likert ///
      mean_d_ghq_likert sd_d_ghq_likert n, noobs
 
 * Save
-save "${out}/Tables/descriptive table/ethnicity_mean_d_ghq_likert.dta", replace
-export delimited using "${out}/Tables/descriptive table/ethnicity_mean_d_ghq_likert.csv", replace
+save "${out}/Tables/descriptive_tables/ethnicity_mean_d_ghq_likert.dta", replace
+export delimited using "${out}/Tables/descriptive_tables/ethnicity_mean_d_ghq_likert.csv", replace
 
 ****************************************************
 * END

@@ -4,35 +4,28 @@ use "${work}/GHQ_longpanel_UKHLS_w1w11_plus_COVID_2020_2021_withIDs_apr_zinv.dta
 capture drop ghq_likert_apr_inv
 gen double ghq_likert_apr_inv = -ghq_likert_apr
 
+*----------------------------------------
+* BAME
+*----------------------------------------
+capture confirm numeric variable ethn_dv
+if _rc==0 {
+    decode ethn_dv, gen(ethn_str)
+}
+else {
+    gen strL ethn_str = ethn_dv
+}
 
-* BIP
-keep if !missing(ethn_dv)
+gen strL ethn_low = lower(strtrim(ethn_str))
 
-capture decode ethn_dv, gen(ethn_str)
-if _rc tostring ethn_dv, gen(ethn_str) usedisplayformat
-gen strL ethn_low = strlower(strtrim(ethn_str))
-
-capture drop bip
-gen byte bip = .
-
-* White British = 0
-replace bip = 0 if strpos(ethn_low, "british/english/scottish/welsh/northern irish") > 0
-
-* BIP = 1
-replace bip = 1 if strpos(ethn_low, "bangladeshi") > 0
-replace bip = 1 if strpos(ethn_low, "indian") > 0
-replace bip = 1 if strpos(ethn_low, "pakistani") > 0
-
-* keep only White British and BIP
-drop if missing(bip)
-
-label define bip_lbl 0 "White British" 1 "BIP", replace
-label values bip bip_lbl
+gen byte bame = .
+replace bame = 0 if strpos(ethn_low, "british/english/scottish/welsh/northern irish") > 0
+replace bame = 1 if !missing(ethn_dv) & bame != 0
+drop if missing(bame)
 
 *----------------------------------------
 * keep analysis sample
 *----------------------------------------
-keep if !missing(pidp, bip, ghq_likert_apr_inv)
+keep if !missing(pidp, bame, ghq_likert_apr_inv)
 
 * pre: UKHLS 2016-2019
 * post: COVID waves
@@ -85,13 +78,13 @@ xtset pidp
 *====================================================
 * MAIN SPEC: unweighted FE event-study
 *====================================================
-reghdfe ghq_likert_apr_inv ib4.evt_cat##i.bip, ///
+reghdfe ghq_likert_apr_inv ib4.evt_cat##i.bame, ///
     absorb(pidp) vce(cluster pidp)
 
 estimates store ES_main
 
 * pre-trend test
-test 1.bip#1.evt_cat 1.bip#2.evt_cat 1.bip#3.evt_cat
+test 1.bame#1.evt_cat 1.bame#2.evt_cat 1.bame#3.evt_cat
 scalar pretrend_p_main = r(p)
 display "Main spec pre-trend p-value = " pretrend_p_main
 *====================================================
@@ -99,9 +92,9 @@ display "Main spec pre-trend p-value = " pretrend_p_main
 *====================================================
 tempname memhold
 postfile `memhold' int evt str12 period ///
-    double est_nonbip se_nonbip lb_nonbip ub_nonbip ///
-    double est_bip    se_bip    lb_bip    ub_bip ///
-    using "${work}/esbip_plotdata.dta", replace
+    double est_nonbame se_nonbame lb_nonbame ub_nonbame ///
+    double est_bame    se_bame    lb_bame    ub_bame ///
+    using "${work}/esbame_plotdata.dta", replace
 
 * 先把 baseline 2019 放進去：兩組都定義為 0
 post `memhold' (4) ("2019") ///
@@ -111,15 +104,15 @@ post `memhold' (4) ("2019") ///
 * 其餘各期
 foreach j in 1 2 3 5 6 7 8 9 10 11 12 13 {
 
-    * ---------- non-bip ----------
+    * ---------- non-BAME ----------
     lincom `j'.evt_cat
     local est_nb = r(estimate)
     local se_nb  = r(se)
     local lb_nb  = r(lb)
     local ub_nb  = r(ub)
 
-    * ---------- bip ----------
-    lincom `j'.evt_cat + `j'.evt_cat#1.bip
+    * ---------- BAME ----------
+    lincom `j'.evt_cat + `j'.evt_cat#1.bame
     local est_b  = r(estimate)
     local se_b   = r(se)
     local lb_b   = r(lb)
@@ -136,9 +129,9 @@ foreach j in 1 2 3 5 6 7 8 9 10 11 12 13 {
 postclose `memhold'
 
 preserve
-    use "${work}/esbip_plotdata.dta", clear
+    use "${work}/esbame_plotdata.dta", clear
     sort evt
-    export delimited using "${work}/esbip_plotdata.csv", replace
+    export delimited using "${work}/esbame_plotdata.csv", replace
     list, noobs
 restore
 
@@ -149,19 +142,19 @@ restore
 estimates restore ES_main
 
 * joint pre-trend test
-test 1.bip#1.evt_cat 1.bip#2.evt_cat 1.bip#3.evt_cat
+test 1.bame#1.evt_cat 1.bame#2.evt_cat 1.bame#3.evt_cat
 scalar pretrend_p = r(p)
 
 tempname memhold3
 postfile `memhold3' str20 period double theta pval str3 stars ///
-    using "${work}/esbip_theta_table.dta", replace
+    using "${work}/esbame_theta_table.dta", replace
 
 * baseline row
 post `memhold3' ("2019 (base)") (0) (.) ("")
 
 * pre + post periods
 foreach j in 1 2 3 5 6 7 8 9 10 11 12 13 {
-    lincom `j'.evt_cat#1.bip
+    lincom `j'.evt_cat#1.bame
     
     local theta = r(estimate)
     local pval  = r(p)
@@ -180,7 +173,7 @@ post `memhold3' ("Joint pre-trend") (.) (pretrend_p) ("")
 
 postclose `memhold3'
 
-use "${work}/esbip_theta_table.dta", clear
+use "${work}/esbame_theta_table.dta", clear
 
 format theta %9.3f
 format pval %9.3f
@@ -190,4 +183,4 @@ gen str10 p_display     = cond(missing(pval), "", string(pval, "%9.2f"))
 
 list period theta_display p_display, noobs
 
-export delimited using "${out}/Event study/ESbip_theta_table.csv", replace
+export delimited using "${out}/Event_study/ESbame_theta_table.csv", replace
